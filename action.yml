@@ -1,0 +1,19 @@
+name: "README AI Auto Action"
+description: "README.mdを自動生成し、多言語バージョンを作成します。"
+inputs:
+  repo:
+    description: "対象リポジトリのURL。例: https://github.com/your-username/target-repo"
+    required: true
+  language:
+    description: "生成する言語。例: ja（日本語）、en（英語）"
+    required: true
+    default: "ja"
+  exclude:
+    description: "除外するファイルやディレクトリのリスト（カンマ区切り）。例: node_modules,dist"
+    required: false
+    default: ""
+runs:
+  using: "docker"
+  image: "Dockerfile"
+  env:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # GitHub Tokenを渡す
