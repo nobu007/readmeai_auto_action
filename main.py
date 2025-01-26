@@ -5,6 +5,9 @@ import subprocess
 previous_readme_path = ".previous_readme.md"
 current_readme_path = "README.md"
 
+# "/usr/src/app/readmeai_auto"をカレントディレクトリにコピー
+subprocess.run(["cp", "-r", "/usr/src/app/readmeai_auto", "."])
+
 # README.mdが変更されたかどうかをチェック
 if os.path.isfile(previous_readme_path):
     # README.mdが変更されているかチェック
