@@ -11,7 +11,8 @@ import subprocess
 # 4. Configures Git settings and creates a new branch for the translated README.md files.
 # 5. Adds the translated README.md files and the previous README.md file to the Git staging area.
 # 6. Commits the changes with a message indicating the addition of the translated README.md files.
-# 7. Creates a pull request using the GitHub CLI with the translated README.md files.
+# 7. Pushes the changes to the remote repository and creates a pull request using the GitHub CLI.
+# 8. Creates a pull request using the GitHub CLI with the translated README.md files.
 #
 # Environment Variables:
 # - GITHUB_TOKEN: GitHub token for authentication.
@@ -60,7 +61,7 @@ if readme_changed:
     # PRを作成するための情報
     github_token = os.environ.get("GITHUB_TOKEN")
     repo_url = os.environ.get("INPUT_REPO")
-    branch_name = "translate-readme"
+    branch_name = f"translate-readme-{os.environ.get('GITHUB_RUN_NUMBER', '')}"
 
     # カレントディレクトリをsafe.directory設定する
     subprocess.run(
@@ -82,37 +83,50 @@ if readme_changed:
 
     for target_file in target_files:
         if os.path.isfile(target_file):
+            print("Adding file to git staging area: ", target_file)
             subprocess.run(["git", "add", target_file], check=True)
 
     # .previous_readme.mdを含める
     if os.path.isfile(previous_readme_path):
+        print("Adding file to git staging area: ", previous_readme_path)
         subprocess.run(["git", "add", previous_readme_path], check=True)
 
-    # 新しいREADMEをコミット
-    subprocess.run(
-        [
-            "git",
-            "commit",
-            "-m",
-            "chore: Add translated README and update previous README",
-        ],
-        check=True,
-    )
+    # 変更がある場合のみPRを作成
+    if subprocess.call(["git", "diff", "--cached", "--quiet"]) != 0:
+        # 新しいREADMEをコミット
+        subprocess.run(
+            [
+                "git",
+                "commit",
+                "-m",
+                "chore: Add translated README and update previous README",
+            ],
+            check=True,
+        )
 
-    # PRを作成
-    subprocess.run(
-        [
-            "gh",
-            "pr",
-            "create",
-            "--base",
-            "main",
-            "--head",
-            branch_name,
-            "--title",
-            "Translated README (readmeai_auto)",
-            "--body",
-            "This PR adds a translated version of the README and updates the previous version.",
-        ],
-        check=True,
-    )
+        # 変更をリモートリポジトリにプッシュ
+        subprocess.run(
+            ["git", "push", "--set-upstream", "origin", branch_name], check=True
+        )
+
+        # PRを作成
+        subprocess.run(
+            [
+                "gh",
+                "pr",
+                "create",
+                "--base",
+                "main",
+                "--head",
+                branch_name,
+                "--title",
+                "Translated README (readmeai_auto)",
+                "--body",
+                "This PR adds a translated version of the README and updates the previous version.",
+            ],
+            check=True,
+        )
+    else:
+        print("No changes to commit. Skipping pull request creation.")
+else:
+    print("No changes README.md. Skipping readme_translator.")
