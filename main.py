@@ -1,12 +1,34 @@
 import os
 import subprocess
 
+
+# This script automates the process of translating a README.md file and creating a pull request.
+#
+# The script performs the following steps:
+# 1. Copies the directory "/usr/src/app/readmeai_auto" to the current directory.
+# 2. Checks if the README.md file has changed compared to a previous version.
+# 3. If the README.md file has changed, it runs a translation script to translate the README.md file.
+# 4. Configures Git settings and creates a new branch for the translated README.md files.
+# 5. Adds the translated README.md files and the previous README.md file to the Git staging area.
+# 6. Commits the changes with a message indicating the addition of the translated README.md files.
+# 7. Creates a pull request using the GitHub CLI with the translated README.md files.
+#
+# Environment Variables:
+# - GITHUB_TOKEN: GitHub token for authentication.
+# - INPUT_REPO: URL of the GitHub repository.
+#
+# Files:
+# - .previous_readme.md: The previous version of the README.md file.
+# - README.md: The current version of the README.md file.
+# - README_EN.md: The translated README.md file in English.
+# - README_JA.md: The translated README.md file in Japanese.
+
 # 前回のREADME.mdを取得
 previous_readme_path = ".previous_readme.md"
 current_readme_path = "README.md"
 
 # "/usr/src/app/readmeai_auto"をカレントディレクトリにコピー
-subprocess.run(["cp", "-r", "/usr/src/app/readmeai_auto", "."])
+subprocess.run(["cp", "-r", "/usr/src/app/readmeai_auto", "."], check=True)
 
 # README.mdが変更されたかどうかをチェック
 if os.path.isfile(previous_readme_path):
@@ -31,7 +53,8 @@ if readme_changed:
             "-l",
             "en",
             "ja",
-        ]
+        ],
+        check=True,
     )
 
     # PRを作成するための情報
@@ -39,21 +62,31 @@ if readme_changed:
     repo_url = os.environ.get("INPUT_REPO")
     branch_name = "translate-readme"
 
+    # カレントディレクトリをsafe.directory設定する
+    subprocess.run(
+        ["git", "config", "--global", "--add", "safe.directory", os.getcwd()],
+        check=True,
+    )
+
     # コミット対象候補
     target_files = ["README_EN.md", "README_JA.md"]
 
     # GitHub CLIを使って新しいブランチを作成
-    subprocess.run(["git", "config", "--global", "user.name", "GitHub Actions"])
-    subprocess.run(["git", "config", "--global", "user.email", "actions@github.com"])
-    subprocess.run(["git", "checkout", "-b", branch_name])
+    subprocess.run(
+        ["git", "config", "--global", "user.name", "GitHub Actions"], check=True
+    )
+    subprocess.run(
+        ["git", "config", "--global", "user.email", "actions@github.com"], check=True
+    )
+    subprocess.run(["git", "checkout", "-b", branch_name], check=True)
 
     for target_file in target_files:
         if os.path.isfile(target_file):
-            subprocess.run(["git", "add", target_file])
+            subprocess.run(["git", "add", target_file], check=True)
 
     # .previous_readme.mdを含める
     if os.path.isfile(previous_readme_path):
-        subprocess.run(["git", "add", previous_readme_path])
+        subprocess.run(["git", "add", previous_readme_path], check=True)
 
     # 新しいREADMEをコミット
     subprocess.run(
@@ -62,7 +95,8 @@ if readme_changed:
             "commit",
             "-m",
             "chore: Add translated README and update previous README",
-        ]
+        ],
+        check=True,
     )
 
     # PRを作成
@@ -79,5 +113,6 @@ if readme_changed:
             "Translated README (readmeai_auto)",
             "--body",
             "This PR adds a translated version of the README and updates the previous version.",
-        ]
+        ],
+        check=True,
     )
