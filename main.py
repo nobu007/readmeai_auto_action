@@ -60,7 +60,7 @@ if readme_changed:
     # PRを作成するための情報
     github_token = os.environ.get("GITHUB_TOKEN")
     repo_url = os.environ.get("INPUT_REPO")
-    branch_name = "translate-readme"
+    branch_name = f"translate-readme-{os.environ.get('GITHUB_RUN_NUMBER', '')}"
 
     # カレントディレクトリをsafe.directory設定する
     subprocess.run(
@@ -82,10 +82,12 @@ if readme_changed:
 
     for target_file in target_files:
         if os.path.isfile(target_file):
+            print("Adding file to git staging area: ", target_file)
             subprocess.run(["git", "add", target_file], check=True)
 
     # .previous_readme.mdを含める
     if os.path.isfile(previous_readme_path):
+        print("Adding file to git staging area: ", previous_readme_path)
         subprocess.run(["git", "add", previous_readme_path], check=True)
 
     # 新しいREADMEをコミット
@@ -99,20 +101,30 @@ if readme_changed:
         check=True,
     )
 
-    # PRを作成
-    subprocess.run(
-        [
-            "gh",
-            "pr",
-            "create",
-            "--base",
-            "main",
-            "--head",
-            branch_name,
-            "--title",
-            "Translated README (readmeai_auto)",
-            "--body",
-            "This PR adds a translated version of the README and updates the previous version.",
-        ],
-        check=True,
-    )
+    # 変更がある場合のみPRを作成
+    if subprocess.call(["git", "diff", "--cached", "--quiet"]) != 0:
+        # 変更をリモートリポジトリにプッシュ
+        subprocess.run(
+            ["git", "push", "--set-upstream", "origin", branch_name], check=True
+        )
+
+        subprocess.run(
+            [
+                "gh",
+                "pr",
+                "create",
+                "--base",
+                "main",
+                "--head",
+                branch_name,
+                "--title",
+                "Translated README (readmeai_auto)",
+                "--body",
+                "This PR adds a translated version of the README and updates the previous version.",
+            ],
+            check=True,
+        )
+    else:
+        print("No changes to commit. Skipping pull request creation.")
+else:
+    print("No changes README.md. Skipping readme_translator.")
