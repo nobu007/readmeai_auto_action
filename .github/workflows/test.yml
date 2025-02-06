@@ -25,4 +25,6 @@ jobs:
 
       - name: Run tests
         run: |
-          python -m unittest discover -s tests  # testsディレクトリ内のテストを実行
+          folder=${{ github.event.inputs.folder || 'tests' }}
+          exclude=${{ github.event.inputs.exclude || '' }}
+          find $folder -type f ! -path "$exclude" -name "*.py" -exec python -m unittest discover -s {} \;
