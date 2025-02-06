@@ -17,6 +17,8 @@ import subprocess
 # Environment Variables:
 # - GITHUB_TOKEN: GitHub token for authentication.
 # - INPUT_REPO: URL of the GitHub repository.
+# - INPUT_FOLDER: Target folder to process.
+# - INPUT_EXCLUDE: Comma-separated list of files or directories to exclude.
 #
 # Files:
 # - .previous_readme.md: The previous version of the README.md file.
@@ -30,6 +32,13 @@ current_readme_path = "README.md"
 
 # "/usr/src/app/readmeai_auto"をカレントディレクトリにコピー
 subprocess.run(["cp", "-r", "/usr/src/app/readmeai_auto", "."], check=True)
+
+# Exclude specified files or directories
+exclude_list = os.environ.get("INPUT_EXCLUDE", "").split(",")
+exclude_list = [item.strip() for item in exclude_list if item.strip()]
+
+# Copy the target folder to the current directory
+folder = os.environ.get("INPUT_FOLDER", ".")
 
 # README.mdが変更されたかどうかをチェック
 if os.path.isfile(previous_readme_path):
@@ -54,6 +63,10 @@ if readme_changed:
             "-l",
             "en",
             "ja",
+            "--folder",
+            folder,
+            "--exclude",
+            ",".join(exclude_list),
         ],
         check=True,
     )
@@ -92,7 +105,7 @@ if readme_changed:
         subprocess.run(["git", "add", previous_readme_path], check=True)
 
     # 変更がある場合のみPRを作成
-    if subprocess.call(["git", "diff", "--cached", "--quiet"]) != 0:
+    if subprocess.call(["git", "diff", "--cached", "--quiet"]) == 0:
         # 新しいREADMEをコミット
         subprocess.run(
             [
